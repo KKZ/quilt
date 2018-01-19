@@ -23,11 +23,13 @@ public class RsaSha256Fulfillment extends FulfillmentBase<RsaSha256Condition>
 
   public static final BigInteger PUBLIC_EXPONENT = BigInteger.valueOf(65537);
   public static final String SHA_256_WITH_RSA_PSS = "SHA256withRSA/PSS";
+  public static final String SHA_256_WITH_RSA = "SHA256withRSA";
 
   private final RSAPublicKey publicKey;
   private final byte[] signature;
   private final String signatureBase64Url;
   private final RsaSha256Condition condition;
+  private final String rsaSha256EncryptionType;
 
   /**
    * Constructs an instance of the fulfillment.
@@ -35,8 +37,9 @@ public class RsaSha256Fulfillment extends FulfillmentBase<RsaSha256Condition>
    * @param publicKey An {@link RSAPublicKey} to be used with this fulfillment.
    * @param signature A byte array that contains a binary representation of the signature associated
    *                  with this fulfillment.
+   * @param pss       If true, use "SHA256withRSA/PSS" as the encryption method. Otherwise, use "SHA256withRSA".
    */
-  public RsaSha256Fulfillment(final RSAPublicKey publicKey, final byte[] signature) {
+  public RsaSha256Fulfillment(final RSAPublicKey publicKey, final byte[] signature, final boolean pss) {
     super(RSA_SHA256);
     Objects.requireNonNull(publicKey, "PublicKey must not be null!");
     Objects.requireNonNull(signature, "Signature must not be null!");
@@ -45,6 +48,22 @@ public class RsaSha256Fulfillment extends FulfillmentBase<RsaSha256Condition>
     this.signature = Arrays.copyOf(signature, signature.length);
     this.signatureBase64Url = Base64.getUrlEncoder().encodeToString(signature);
     this.condition = new RsaSha256Condition(publicKey);
+    if (pss) {
+      this.rsaSha256EncryptionType = SHA_256_WITH_RSA_PSS;
+    } else {
+      this.rsaSha256EncryptionType = SHA_256_WITH_RSA;
+    }
+  }
+
+    /**
+   * Constructs an instance of the fulfillment.
+   *
+   * @param publicKey An {@link RSAPublicKey} to be used with this fulfillment.
+   * @param signature A byte array that contains a binary representation of the signature associated
+   *                  with this fulfillment.
+   */
+  public RsaSha256Fulfillment(final RSAPublicKey publicKey, final byte[] signature) {
+    this(publicKey, signature, true);
   }
 
   /**
@@ -78,6 +97,10 @@ public class RsaSha256Fulfillment extends FulfillmentBase<RsaSha256Condition>
     return this.signatureBase64Url;
   }
 
+  public String getEncryptionType() {
+    return this.rsaSha256EncryptionType;
+  }
+
   @Override
   public RsaSha256Condition getCondition() {
     return this.condition;
@@ -94,7 +117,7 @@ public class RsaSha256Fulfillment extends FulfillmentBase<RsaSha256Condition>
     }
 
     try {
-      Signature rsaSigner = Signature.getInstance(SHA_256_WITH_RSA_PSS);
+      Signature rsaSigner = Signature.getInstance(rsaSha256EncryptionType);
       rsaSigner.initVerify(publicKey);
       rsaSigner.update(message);
       return rsaSigner.verify(signature);
@@ -142,6 +165,7 @@ public class RsaSha256Fulfillment extends FulfillmentBase<RsaSha256Condition>
     sb.append(", \n\tsignature=").append(signatureBase64Url);
     sb.append(", \n\tcondition=").append(condition);
     sb.append(", \n\ttype=").append(getType());
+    sb.append(", \n\tencrptionMethod=").append(rsaSha256EncryptionType);
     sb.append("\n}");
     return sb.toString();
   }
